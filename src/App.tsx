@@ -6,22 +6,29 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Plus, 
-  Search, 
   Trash2, 
   ChevronLeft, 
   Settings, 
   Type, 
   Palette, 
   Clock, 
+  Pencil,
   Save,
-  X
+  X,
+  Calendar as CalendarIcon,
+  LayoutGrid,
+  List as ListIcon,
+  Menu,
+  Image as ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Types ---
 
-type Theme = 'Klassik' | 'An\'anaviy' | 'Zamonaviy' | 'Tungi' | 'Yozuv mashinkasi';
+type Theme = 'Klassik' | 'Zamonaviy' | 'Tungi';
 type FontSize = 'Kichik' | 'O\'rta' | 'Katta';
+type PaperStyle = 'Oddiy' | 'Chiziqli' | 'Katakli';
+type ViewMode = 'Ro\'yxat' | 'Taqvim';
 
 interface Note {
   id: string;
@@ -34,16 +41,27 @@ interface Note {
 
 const THEMES: Record<Theme, { bg: string; text: string; accent: string; border: string }> = {
   'Klassik': { bg: '#FFFFFF', text: '#000000', accent: '#000000', border: '#000000' },
-  'An\'anaviy': { bg: '#F4ECD8', text: '#5D4037', accent: '#8D6E63', border: '#5D4037' },
   'Zamonaviy': { bg: '#F5F5F5', text: '#333333', accent: '#666666', border: '#333333' },
-  'Tungi': { bg: '#000000', text: '#FFFFFF', accent: '#FF2D55', border: '#FFFFFF' },
-  'Yozuv mashinkasi': { bg: '#E3F2FD', text: '#0D47A1', accent: '#1976D2', border: '#0D47A1' },
+  'Tungi': { bg: '#222222', text: '#FFFFFF', accent: '#FFFFFF', border: '#FFFFFF' },
 };
+
+const BACKGROUND_IMAGES = [
+  { id: 'none', name: 'Yo\'q', url: '' },
+  { id: 'night', name: 'Tun', url: 'https://i.pinimg.com/736x/cc/88/81/cc88817498df297e574323427a7c4430.jpg' },
+  { id: 'forest', name: "O'rmon", url: 'https://i.pinimg.com/736x/14/85/1d/14851d161855fc11e842fd392dc6340b.jpg' },
+  { id: 'mountains', name: 'Tog\'lar', url: 'https://i.pinimg.com/1200x/8d/82/c4/8d82c4f2233a0c4b39feaa299f00e111.jpg' },
+];
 
 const FONT_SIZES: Record<FontSize, string> = {
   'Kichik': 'text-sm',
   'O\'rta': 'text-base',
   'Katta': 'text-xl',
+};
+
+const LINE_HEIGHTS: Record<FontSize, string> = {
+  'Kichik': '1.5rem',
+  'O\'rta': '2rem',
+  'Katta': '2.5rem',
 };
 
 // --- Utils ---
@@ -57,6 +75,71 @@ const calculateReadingTime = (text: string): string => {
 
 // --- Components ---
 
+interface NoteCardProps {
+  note: Note;
+  currentThemeStyles: any;
+  getPaperStyle: (size?: FontSize) => React.CSSProperties;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+const NoteCard: React.FC<NoteCardProps> = ({ 
+  note, 
+  currentThemeStyles, 
+  getPaperStyle, 
+  onEdit, 
+  onDelete 
+}) => {
+  return (
+    <div className="relative overflow-hidden rounded-sm group touch-pan-y">
+      {/* Swipe Backgrounds */}
+      <div className="absolute inset-0 flex items-center justify-between px-6 opacity-40 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-2 text-blue-500 font-bold uppercase text-[10px] tracking-widest">
+          <Pencil size={16} />
+          <span>Tahrirlash</span>
+        </div>
+        <div className="flex items-center gap-2 text-red-500 font-bold uppercase text-[10px] tracking-widest">
+          <span>O'chirish</span>
+          <Trash2 size={16} />
+        </div>
+      </div>
+
+      <motion.div 
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.6}
+        dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
+        onDragEnd={(_, info) => {
+          if (info.offset.x > 80) {
+            onEdit();
+          } else if (info.offset.x < -80) {
+            onDelete();
+          }
+        }}
+        onClick={onEdit}
+        className="relative z-10 cursor-pointer border-2 p-4 rounded-sm h-28 flex flex-col transition-shadow hover:shadow-lg active:scale-[0.99] bg-white"
+        style={{ 
+          backgroundColor: currentThemeStyles.bg,
+          borderColor: `${currentThemeStyles.border}20`,
+          willChange: 'transform'
+        }}
+      >
+        <h2 className="text-lg font-bold mb-1 line-clamp-1">
+          {note.title || 'Sarlavhasiz'}
+        </h2>
+        <div className="mt-auto text-xs font-bold uppercase tracking-widest opacity-40">
+          {new Date(note.updatedAt).toLocaleString('uz-UZ', { 
+            day: 'numeric', 
+            month: 'long',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 export default function App() {
   // State
   const [notes, setNotes] = useState<Note[]>(() => {
@@ -65,11 +148,18 @@ export default function App() {
   });
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('qaydlar_theme') as Theme) || 'Klassik');
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = localStorage.getItem('qaydlar_theme') as Theme;
+    return (saved && THEMES[saved]) ? saved : 'Klassik';
+  });
   const [fontSize, setFontSize] = useState<FontSize>(() => (localStorage.getItem('qaydlar_font_size') as FontSize) || 'O\'rta');
   const [showSettings, setShowSettings] = useState(false);
   const [noteToDeleteId, setNoteToDeleteId] = useState<string | null>(null);
+  const [isLocked, setIsLocked] = useState(true);
+  const [paperStyle, setPaperStyle] = useState<PaperStyle>(() => (localStorage.getItem('qaydlar_paper_style') as PaperStyle) || 'Oddiy');
+  const [bgImage, setBgImage] = useState<string>(() => localStorage.getItem('qaydlar_bg_image') || '');
+  const [viewMode, setViewMode] = useState<ViewMode>('Ro\'yxat');
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   // Persistence
   useEffect(() => {
@@ -84,17 +174,20 @@ export default function App() {
     localStorage.setItem('qaydlar_font_size', fontSize);
   }, [fontSize]);
 
+  useEffect(() => {
+    localStorage.setItem('qaydlar_paper_style', paperStyle);
+  }, [paperStyle]);
+
+  useEffect(() => {
+    localStorage.setItem('qaydlar_bg_image', bgImage);
+  }, [bgImage]);
+
   // Derived State
   const currentNote = useMemo(() => notes.find(n => n.id === currentNoteId), [notes, currentNoteId]);
   
   const filteredNotes = useMemo(() => {
-    return notes
-      .filter(n => 
-        n.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        n.content.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      .sort((a, b) => b.updatedAt - a.updatedAt);
-  }, [notes, searchQuery]);
+    return [...notes].sort((a, b) => b.updatedAt - a.updatedAt);
+  }, [notes]);
 
   const readingTime = useMemo(() => {
     if (!currentNote) return '0 min o\'qish';
@@ -112,6 +205,7 @@ export default function App() {
     setNotes([newNote, ...notes]);
     setCurrentNoteId(newNote.id);
     setIsEditing(true);
+    setIsLocked(false);
   };
 
   const handleUpdateNote = (id: string, updates: Partial<Note>) => {
@@ -139,16 +233,135 @@ export default function App() {
 
   const currentThemeStyles = THEMES[theme];
 
+  const getPaperStyle = (size: FontSize = 'O\'rta') => {
+    if (paperStyle === 'Oddiy') return {};
+    
+    const lh = LINE_HEIGHTS[size];
+    const color = `${currentThemeStyles.text}15`; // 15 is hex for ~8% opacity
+    
+    if (paperStyle === 'Chiziqli') {
+      return {
+        backgroundImage: `linear-gradient(transparent calc(${lh} - 1px), ${color} ${lh})`,
+        backgroundSize: `100% ${lh}`,
+        lineHeight: lh,
+        paddingTop: `calc(${lh} / 2)`,
+        backgroundPosition: `0 calc(${lh} / 2)`,
+        backgroundAttachment: 'local'
+      };
+    }
+    
+    if (paperStyle === 'Katakli') {
+      return {
+        backgroundImage: `linear-gradient(transparent calc(${lh} - 1px), ${color} ${lh}), linear-gradient(90deg, transparent calc(${lh} - 1px), ${color} ${lh})`,
+        backgroundSize: `${lh} ${lh}`,
+        lineHeight: lh,
+        paddingTop: `calc(${lh} / 2)`,
+        backgroundPosition: `0 calc(${lh} / 2)`,
+        backgroundAttachment: 'local'
+      };
+    }
+    
+    return {};
+  };
+
+  const renderCalendar = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    const days = [];
+    // Adjust for Monday start if needed, but standard is Sunday (0)
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} className="h-12 sm:h-20" />);
+    }
+    
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      const dateString = date.toDateString();
+      const dayNotes = notes.filter(n => new Date(n.updatedAt).toDateString() === dateString);
+      
+      days.push(
+        <div 
+          key={d} 
+          className={`h-12 sm:h-20 border-t border-l flex flex-col p-1 sm:p-2 transition-colors hover:bg-black/5 cursor-pointer ${dayNotes.length > 0 ? 'font-bold' : 'opacity-40'}`}
+          style={{ borderColor: `${currentThemeStyles.border}20` }}
+          onClick={() => {
+            if (dayNotes.length > 0) {
+              setViewMode('Ro\'yxat');
+            }
+          }}
+        >
+          <span className="text-xs">{d}</span>
+          {dayNotes.length > 0 && (
+            <div className="mt-auto flex gap-1 flex-wrap">
+              {dayNotes.slice(0, 3).map((_, i) => (
+                <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentThemeStyles.text }} />
+              ))}
+              {dayNotes.length > 3 && <span className="text-[8px]">+{dayNotes.length - 3}</span>}
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    return (
+      <div className="flex flex-col flex-1">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold uppercase tracking-widest">
+            {currentMonth.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' })}
+          </h2>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setCurrentMonth(new Date(year, month - 1))}
+              className="p-2 border-2 rounded-sm"
+              style={{ borderColor: currentThemeStyles.border }}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button 
+              onClick={() => setCurrentMonth(new Date(year, month + 1))}
+              className="p-2 border-2 rounded-sm"
+              style={{ borderColor: currentThemeStyles.border }}
+            >
+              <ChevronLeft size={18} className="rotate-180" />
+            </button>
+          </div>
+        </div>
+        
+        <div 
+          className="grid grid-cols-7 border-r border-b"
+          style={{ borderColor: `${currentThemeStyles.border}20` }}
+        >
+          {['Ya', 'Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sha'].map(day => (
+            <div key={day} className="h-10 flex items-center justify-center text-[10px] font-bold uppercase opacity-40 border-l border-t" style={{ borderColor: `${currentThemeStyles.border}20` }}>
+              {day}
+            </div>
+          ))}
+          {days}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div 
-      className="min-h-screen transition-colors duration-500 flex flex-col items-center overflow-x-hidden"
+      className="min-h-screen transition-colors duration-500 flex flex-col items-center overflow-x-hidden relative"
       style={{ 
         backgroundColor: currentThemeStyles.bg, 
         color: currentThemeStyles.text,
       }}
     >
+      {/* Background Image Overlay */}
+      {bgImage && (
+        <div 
+          className="fixed inset-0 z-0 opacity-40 pointer-events-none bg-cover bg-center transition-all duration-700"
+          style={{ backgroundImage: `url(${bgImage})` }}
+        />
+      )}
+
       {/* Main Container */}
-      <div className="w-full max-w-2xl min-h-screen flex flex-col relative px-4 py-6 md:px-8">
+      <div className="w-full max-w-2xl min-h-screen flex flex-col relative z-10 px-4 py-6 md:px-8">
         
         {/* Top Bar */}
         <header className="flex items-center justify-between mb-8">
@@ -165,9 +378,9 @@ export default function App() {
             <button 
               onClick={() => setShowSettings(!showSettings)}
               className="p-2 hover:opacity-70 transition-opacity"
-              aria-label="Sozlamalar"
+              aria-label="Menyu"
             >
-              <Settings size={20} />
+              <Menu size={24} />
             </button>
           </div>
         </header>
@@ -196,7 +409,7 @@ export default function App() {
                     value={currentNote.title}
                     onChange={(e) => handleUpdateNote(currentNote.id, { title: e.target.value })}
                     className="flex-1 bg-transparent text-2xl font-bold focus:outline-none placeholder:opacity-30"
-                    autoFocus
+                    readOnly={isLocked}
                   />
                 </div>
                 
@@ -204,7 +417,9 @@ export default function App() {
                   placeholder="Fikrlaringizni shu yerga yozing..."
                   value={currentNote.content}
                   onChange={(e) => handleUpdateNote(currentNote.id, { content: e.target.value })}
-                  className={`flex-1 bg-transparent resize-none focus:outline-none placeholder:opacity-30 leading-relaxed ${FONT_SIZES[fontSize]}`}
+                  className={`flex-1 bg-transparent resize-none focus:outline-none placeholder:opacity-30 px-4 pb-4 ${FONT_SIZES[fontSize]}`}
+                  readOnly={isLocked}
+                  style={getPaperStyle(fontSize)}
                 />
                 
                 <div className="mt-6 flex justify-end gap-4">
@@ -216,18 +431,33 @@ export default function App() {
                     <Trash2 size={18} />
                     <span className="hidden sm:inline">O'chirish</span>
                   </button>
-                  <button 
-                    onClick={() => setIsEditing(false)}
-                    className="flex items-center gap-2 px-6 py-2 border-2 rounded-sm font-bold transition-all"
-                    style={{ 
-                      borderColor: currentThemeStyles.border,
-                      backgroundColor: currentThemeStyles.text,
-                      color: currentThemeStyles.bg
-                    }}
-                  >
-                    <Save size={18} />
-                    <span>Saqlash</span>
-                  </button>
+                  {isLocked ? (
+                    <button 
+                      onClick={() => setIsLocked(false)}
+                      className="flex items-center gap-2 px-6 py-2 border-2 rounded-sm font-bold transition-all"
+                      style={{ 
+                        borderColor: currentThemeStyles.border,
+                        backgroundColor: currentThemeStyles.text,
+                        color: currentThemeStyles.bg
+                      }}
+                    >
+                      <Pencil size={18} />
+                      <span>Tahrirlash</span>
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => setIsLocked(true)}
+                      className="flex items-center gap-2 px-6 py-2 border-2 rounded-sm font-bold transition-all"
+                      style={{ 
+                        borderColor: currentThemeStyles.border,
+                        backgroundColor: currentThemeStyles.text,
+                        color: currentThemeStyles.bg
+                      }}
+                    >
+                      <Save size={18} />
+                      <span>Saqlash</span>
+                    </button>
+                  )}
                 </div>
               </motion.div>
             ) : (
@@ -240,70 +470,61 @@ export default function App() {
               >
                 <div className="flex items-center justify-between mb-8">
                   <h1 className="text-4xl font-bold tracking-tighter">Qaydlar</h1>
-                </div>
-
-                {/* Search */}
-                <div 
-                  className="flex items-center gap-3 px-4 py-3 border-2 rounded-sm mb-8"
-                  style={{ borderColor: currentThemeStyles.border }}
-                >
-                  <Search size={18} className="opacity-40" />
-                  <input 
-                    type="text"
-                    placeholder="Qidirish..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="flex-1 bg-transparent focus:outline-none placeholder:opacity-30"
-                  />
-                  {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} className="opacity-40 hover:opacity-100">
-                      <X size={18} />
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setViewMode(viewMode === 'Ro\'yxat' ? 'Taqvim' : 'Ro\'yxat')}
+                      className="p-3 rounded-full border-2 hover:scale-110 transition-transform"
+                      style={{ borderColor: currentThemeStyles.border }}
+                      title={viewMode === 'Ro\'yxat' ? 'Taqvim ko\'rinishi' : 'Ro\'yxat ko\'rinishi'}
+                    >
+                      {viewMode === 'Ro\'yxat' ? <CalendarIcon size={24} /> : <ListIcon size={24} />}
                     </button>
-                  )}
+                    <button 
+                      onClick={handleCreateNote}
+                      className="p-3 rounded-full border-2 hover:scale-110 transition-transform"
+                      style={{ borderColor: currentThemeStyles.border }}
+                    >
+                      <Plus size={24} />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Notes List */}
-                <div className="space-y-6">
-                  {filteredNotes.length > 0 ? (
-                    filteredNotes.map(note => (
-                      <motion.div 
-                        layout
-                        key={note.id}
-                        onClick={() => {
-                          setCurrentNoteId(note.id);
-                          setIsEditing(true);
-                        }}
-                        className="group cursor-pointer border-b-2 pb-6 transition-opacity hover:opacity-70"
-                        style={{ borderColor: `${currentThemeStyles.border}20` }}
-                      >
-                        <h2 className="text-xl font-bold mb-2 truncate">
-                          {note.title || 'Sarlavhasiz'}
-                        </h2>
-                        <p className="opacity-60 line-clamp-2 text-sm leading-relaxed">
-                          {note.content || 'Hech qanday matn yo\'q...'}
-                        </p>
-                        <div className="mt-3 text-[10px] uppercase tracking-widest opacity-40">
-                          {new Date(note.updatedAt).toLocaleDateString('uz-UZ', { 
-                            day: 'numeric', 
-                            month: 'long', 
-                            year: 'numeric' 
-                          })}
+                {viewMode === 'Taqvim' ? (
+                  renderCalendar()
+                ) : (
+                  <>
+                    {/* Notes List */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {filteredNotes.length > 0 ? (
+                        filteredNotes.map(note => (
+                          <NoteCard
+                            key={note.id}
+                            note={note}
+                            currentThemeStyles={currentThemeStyles}
+                            getPaperStyle={getPaperStyle}
+                            onEdit={() => {
+                              setCurrentNoteId(note.id);
+                              setIsEditing(true);
+                              setIsLocked(true);
+                            }}
+                            onDelete={() => handleDeleteNote(note.id)}
+                          />
+                        ))
+                      ) : (
+                        <div className="col-span-full flex flex-col items-center justify-center py-20 opacity-30 text-center">
+                          <Plus size={48} className="mb-4" />
+                          <p>Hozircha hech qanday qayd yo'q</p>
                         </div>
-                      </motion.div>
-                    ))
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-20 opacity-30 text-center">
-                      <Plus size={48} className="mb-4" />
-                      <p>Hozircha hech qanday qayd yo'q</p>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
         </main>
 
-        {/* Settings Modal */}
+        {/* Hamburger Menu (Settings Drawer) */}
         <AnimatePresence>
           {showSettings && (
             <>
@@ -312,46 +533,71 @@ export default function App() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setShowSettings(false)}
-                className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
+                className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
               />
               <motion.div 
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                className="fixed bottom-0 left-0 right-0 z-50 p-6 rounded-t-3xl border-t-4 shadow-2xl"
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="fixed top-0 right-0 bottom-0 z-50 w-[280px] p-8 flex flex-col shadow-2xl"
                 style={{ 
                   backgroundColor: currentThemeStyles.bg,
-                  borderColor: currentThemeStyles.border,
-                  color: currentThemeStyles.text
+                  color: currentThemeStyles.text,
+                  borderLeft: `2px solid ${currentThemeStyles.border}20`
                 }}
               >
-                <div className="max-w-xl mx-auto">
-                  <div className="flex items-center justify-between mb-8">
-                    <h3 className="text-xl font-bold uppercase tracking-widest">Sozlamalar</h3>
-                    <button onClick={() => setShowSettings(false)} className="p-2">
-                      <X size={24} />
-                    </button>
-                  </div>
+                <div className="flex items-center justify-between mb-12">
+                  <h3 className="text-xl font-bold uppercase tracking-[0.2em]">Menyu</h3>
+                  <button onClick={() => setShowSettings(false)} className="p-2 hover:rotate-90 transition-transform">
+                    <X size={24} />
+                  </button>
+                </div>
 
+                <div className="flex-1 overflow-y-auto space-y-10">
                   {/* Font Size */}
-                  <div className="mb-8">
-                    <div className="flex items-center gap-2 mb-4 opacity-60 text-xs font-bold uppercase tracking-widest">
+                  <div>
+                    <div className="flex items-center gap-2 mb-4 opacity-40 text-[10px] font-bold uppercase tracking-widest">
                       <Type size={14} />
                       <span>Shrift o'lchami</span>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-1 gap-2">
                       {(Object.keys(FONT_SIZES) as FontSize[]).map(size => (
                         <button
                           key={size}
                           onClick={() => setFontSize(size)}
-                          className={`flex-1 py-3 border-2 rounded-sm transition-all ${fontSize === size ? 'font-bold' : 'opacity-40'}`}
+                          className={`w-full py-3 px-4 text-left border-2 rounded-sm transition-all flex justify-between items-center ${fontSize === size ? 'font-bold' : 'opacity-40'}`}
                           style={{ 
-                            borderColor: currentThemeStyles.border,
-                            backgroundColor: fontSize === size ? currentThemeStyles.text : 'transparent',
-                            color: fontSize === size ? currentThemeStyles.bg : currentThemeStyles.text
+                            borderColor: fontSize === size ? currentThemeStyles.border : `${currentThemeStyles.border}20`,
+                            backgroundColor: fontSize === size ? `${currentThemeStyles.text}10` : 'transparent'
                           }}
                         >
-                          {size}
+                          <span>{size}</span>
+                          {fontSize === size && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentThemeStyles.text }} />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Paper Style */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-4 opacity-40 text-[10px] font-bold uppercase tracking-widest">
+                      <LayoutGrid size={14} />
+                      <span>Qog'oz uslubi</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      {(['Oddiy', 'Chiziqli', 'Katakli'] as PaperStyle[]).map(style => (
+                        <button
+                          key={style}
+                          onClick={() => setPaperStyle(style)}
+                          className={`w-full py-3 px-4 text-left border-2 rounded-sm transition-all flex justify-between items-center ${paperStyle === style ? 'font-bold' : 'opacity-40'}`}
+                          style={{ 
+                            borderColor: paperStyle === style ? currentThemeStyles.border : `${currentThemeStyles.border}20`,
+                            backgroundColor: paperStyle === style ? `${currentThemeStyles.text}10` : 'transparent'
+                          }}
+                        >
+                          <span>{style}</span>
+                          {paperStyle === style && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentThemeStyles.text }} />}
                         </button>
                       ))}
                     </div>
@@ -359,60 +605,72 @@ export default function App() {
 
                   {/* Themes */}
                   <div>
-                    <div className="flex items-center gap-2 mb-4 opacity-60 text-xs font-bold uppercase tracking-widest">
+                    <div className="flex items-center gap-2 mb-4 opacity-40 text-[10px] font-bold uppercase tracking-widest">
                       <Palette size={14} />
                       <span>Mavzular</span>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 gap-2">
                       {(Object.keys(THEMES) as Theme[]).map(t => (
                         <button
                           key={t}
                           onClick={() => setTheme(t)}
-                          className={`flex flex-col items-center gap-2 p-3 border-2 rounded-sm transition-all ${theme === t ? 'ring-4 ring-offset-2' : 'opacity-60'}`}
+                          className={`w-full py-3 px-4 text-left border-2 rounded-sm transition-all flex justify-between items-center ${theme === t ? 'font-bold' : 'opacity-40'}`}
                           style={{ 
-                            borderColor: currentThemeStyles.border,
-                            backgroundColor: THEMES[t].bg,
-                            color: THEMES[t].text,
-                            // @ts-ignore
-                            '--tw-ring-color': currentThemeStyles.border
+                            borderColor: theme === t ? currentThemeStyles.border : `${currentThemeStyles.border}20`,
+                            backgroundColor: theme === t ? `${currentThemeStyles.text}10` : 'transparent'
                           }}
                         >
-                          <div className="w-full h-8 border border-current opacity-20" />
-                          <span className="text-[10px] font-bold uppercase tracking-tighter">{t}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: THEMES[t].bg, borderColor: THEMES[t].border }} />
+                            <span>{t}</span>
+                          </div>
+                          {theme === t && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentThemeStyles.text }} />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Background Images */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-4 opacity-40 text-[10px] font-bold uppercase tracking-widest">
+                      <ImageIcon size={14} />
+                      <span>Fon rasmi</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {BACKGROUND_IMAGES.map(img => (
+                        <button
+                          key={img.id}
+                          onClick={() => setBgImage(img.url)}
+                          className={`relative h-20 border-2 rounded-sm overflow-hidden transition-all ${bgImage === img.url ? 'border-current' : 'opacity-40 border-transparent'}`}
+                          style={{ borderColor: bgImage === img.url ? currentThemeStyles.border : 'transparent' }}
+                        >
+                          {img.url ? (
+                            <img src={img.url} alt={img.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] font-bold uppercase" style={{ backgroundColor: `${currentThemeStyles.text}10` }}>
+                              {img.name}
+                            </div>
+                          )}
+                          {bgImage === img.url && (
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                              <div className="w-2 h-2 rounded-full bg-white shadow-lg" />
+                            </div>
+                          )}
                         </button>
                       ))}
                     </div>
                   </div>
                 </div>
+
+                {/* Version Info */}
+                <div className="mt-auto pt-8 border-t border-black/5 opacity-30 text-center">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.3em]">Qaydlar v1.2.0</p>
+                  <p className="text-[8px] mt-1">© 2026 Barcha huquqlar himoyalangan</p>
+                </div>
               </motion.div>
             </>
           )}
         </AnimatePresence>
-
-        {/* Floating Action Bar (Mobile) */}
-        {!isEditing && !showSettings && !noteToDeleteId && (
-          <motion.div 
-            initial={{ y: 100 }}
-            animate={{ y: 0 }}
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 rounded-full border-4 shadow-xl z-30"
-            style={{ 
-              backgroundColor: currentThemeStyles.bg,
-              borderColor: currentThemeStyles.border
-            }}
-          >
-            <button 
-              onClick={handleCreateNote}
-              className="flex items-center gap-2 px-6 py-3 rounded-full font-bold transition-all hover:scale-105"
-              style={{ 
-                backgroundColor: currentThemeStyles.text,
-                color: currentThemeStyles.bg
-              }}
-            >
-              <Plus size={20} />
-              <span>Yangi qayd</span>
-            </button>
-          </motion.div>
-        )}
 
         {/* Delete Confirmation Modal */}
         <AnimatePresence>
