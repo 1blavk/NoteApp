@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -19,7 +19,9 @@ import {
   LayoutGrid,
   List as ListIcon,
   Menu,
-  Image as ImageIcon
+  Image as ImageIcon,
+  CheckCircle2,
+  Circle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -35,6 +37,7 @@ interface Note {
   title: string;
   content: string;
   updatedAt: number;
+  completed?: boolean;
 }
 
 // --- Constants ---
@@ -47,9 +50,9 @@ const THEMES: Record<Theme, { bg: string; text: string; accent: string; border: 
 
 const BACKGROUND_IMAGES = [
   { id: 'none', name: 'Yo\'q', url: '' },
-  { id: 'night', name: 'Tun', url: 'https://i.pinimg.com/736x/cc/88/81/cc88817498df297e574323427a7c4430.jpg' },
+  { id: 'Nature', name: 'Kun', url: 'https://i.pinimg.com/736x/25/8d/ed/258ded0b868d38b2e513d477c66b05f9.jpg' },
   { id: 'forest', name: "O'rmon", url: 'https://i.pinimg.com/736x/14/85/1d/14851d161855fc11e842fd392dc6340b.jpg' },
-  { id: 'mountains', name: 'Tog\'lar', url: 'https://i.pinimg.com/1200x/8d/82/c4/8d82c4f2233a0c4b39feaa299f00e111.jpg' },
+  { id: 'mountains', name: 'Tog\'lar', url: 'https://i.pinimg.com/736x/d6/1d/fe/d61dfea97ca56afd51cb74f795b6035e.jpg' },
 ];
 
 const FONT_SIZES: Record<FontSize, string> = {
@@ -68,9 +71,17 @@ const LINE_HEIGHTS: Record<FontSize, string> = {
 
 const calculateReadingTime = (text: string): string => {
   const wordsPerMinute = 200;
-  const words = text.trim().split(/\s+/).length;
-  const minutes = Math.ceil(words / wordsPerMinute);
-  return `${minutes} min o'qish`;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  if (words === 0) return "0 daqiqa";
+  
+  const minutes = words / wordsPerMinute;
+  if (minutes < 0.5) {
+    return "30 soniyadan kam";
+  }
+  if (minutes < 1) {
+    return "1 daqiqadan kam";
+  }
+  return `${Math.ceil(minutes)} daqiqa o'qish`;
 };
 
 // --- Components ---
@@ -78,66 +89,93 @@ const calculateReadingTime = (text: string): string => {
 interface NoteCardProps {
   note: Note;
   currentThemeStyles: any;
-  getPaperStyle: (size?: FontSize) => React.CSSProperties;
   onEdit: () => void;
-  onDelete: () => void;
+  onToggleComplete: () => void;
 }
 
 const NoteCard: React.FC<NoteCardProps> = ({ 
   note, 
   currentThemeStyles, 
-  getPaperStyle, 
   onEdit, 
-  onDelete 
+  onToggleComplete
 }) => {
   return (
-    <div className="relative overflow-hidden rounded-sm group touch-pan-y">
-      {/* Swipe Backgrounds */}
-      <div className="absolute inset-0 flex items-center justify-between px-6 opacity-40 group-hover:opacity-100 transition-opacity">
-        <div className="flex items-center gap-2 text-blue-500 font-bold uppercase text-[10px] tracking-widest">
-          <Pencil size={16} />
-          <span>Tahrirlash</span>
-        </div>
-        <div className="flex items-center gap-2 text-red-500 font-bold uppercase text-[10px] tracking-widest">
-          <span>O'chirish</span>
-          <Trash2 size={16} />
+    <div className="relative overflow-hidden rounded-sm group">
+      <div 
+        onClick={onEdit}
+        className={`relative z-10 cursor-pointer border-2 p-4 rounded-sm h-28 flex flex-col transition-all hover:shadow-lg active:scale-[0.99] bg-white ${note.completed ? 'opacity-60' : ''}`}
+        style={{ 
+          backgroundColor: currentThemeStyles.bg,
+          borderColor: note.completed ? `${currentThemeStyles.border}40` : `${currentThemeStyles.border}20`,
+        }}
+      >
+        <div className="flex justify-between items-start gap-3">
+          <h2 
+            className={`text-lg font-bold mb-1 line-clamp-1 flex-1 ${note.completed ? 'line-through opacity-50' : ''}`}
+          >
+            {note.title || 'Sarlavhasiz'}
+          </h2>
+          
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleComplete();
+              }}
+              className="relative flex items-center justify-center p-1"
+            >
+            <AnimatePresence mode="wait">
+              {note.completed ? (
+                <motion.div
+                  key="completed"
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.5, opacity: 0 }}
+                  className="text-green-500"
+                >
+                  <CheckCircle2 size={24} />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="pending"
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.5, opacity: 0 }}
+                  className="opacity-20 hover:opacity-100 transition-opacity"
+                >
+                  <Circle size={24} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            {/* Smooth Ring Effect on Click */}
+            {note.completed && (
+              <motion.div 
+                initial={{ scale: 0.8, opacity: 0.5 }}
+                animate={{ scale: 1.5, opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="absolute inset-0 border-2 border-green-500 rounded-full pointer-events-none"
+              />
+            )}
+          </button>
         </div>
       </div>
 
-      <motion.div 
-        drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.6}
-        dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
-        onDragEnd={(_, info) => {
-          if (info.offset.x > 80) {
-            onEdit();
-          } else if (info.offset.x < -80) {
-            onDelete();
-          }
-        }}
-        onClick={onEdit}
-        className="relative z-10 cursor-pointer border-2 p-4 rounded-sm h-28 flex flex-col transition-shadow hover:shadow-lg active:scale-[0.99] bg-white"
-        style={{ 
-          backgroundColor: currentThemeStyles.bg,
-          borderColor: `${currentThemeStyles.border}20`,
-          willChange: 'transform'
-        }}
-      >
-        <h2 className="text-lg font-bold mb-1 line-clamp-1">
-          {note.title || 'Sarlavhasiz'}
-        </h2>
-        <div className="mt-auto text-xs font-bold uppercase tracking-widest opacity-40">
+      <div className="flex justify-between items-end mt-auto">
+        <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 flex items-center gap-1">
+          <Clock size={10} />
+          <span>{calculateReadingTime(note.content)}</span>
+        </div>
+        <div className="text-[10px] font-bold uppercase tracking-widest opacity-40">
           {new Date(note.updatedAt).toLocaleString('uz-UZ', { 
             day: 'numeric', 
-            month: 'long',
-            hour: '2-digit',
-            minute: '2-digit'
+            month: 'short'
           })}
         </div>
-      </motion.div>
+      </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default function App() {
@@ -160,8 +198,93 @@ export default function App() {
   const [bgImage, setBgImage] = useState<string>(() => localStorage.getItem('qaydlar_bg_image') || '');
   const [viewMode, setViewMode] = useState<ViewMode>('Ro\'yxat');
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [isScrolling, setIsScrolling] = useState(false);
+
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus when creating or editing
+  useEffect(() => {
+    if (isEditing && !isLocked) {
+      // Multiple attempts for mobile browsers
+      const focus = () => {
+        if (titleInputRef.current) {
+          titleInputRef.current.focus();
+          // For some mobile browsers, selecting text also helps trigger the keyboard
+          if (titleInputRef.current.value === '') {
+            titleInputRef.current.setSelectionRange(0, 0);
+          }
+        }
+      };
+
+      // Immediate attempt
+      focus();
+      
+      // Delayed attempts to account for animations and keyboard lag
+      const t1 = setTimeout(focus, 100);
+      const t2 = setTimeout(focus, 300);
+      const t3 = setTimeout(focus, 500);
+
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
+    }
+  }, [isEditing, isLocked]);
 
   // Persistence
+  useEffect(() => {
+    let timeout: any;
+    const handleScroll = () => {
+      setIsScrolling(true);
+      clearTimeout(timeout);
+      timeout = setTimeout(() => setIsScrolling(false), 1000);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  // Prevent zoom
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+      }
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    };
+
+    const handleGestureStart = (e: any) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener('wheel', handleWheel, { passive: false });
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('gesturestart', handleGestureStart);
+
+    return () => {
+      document.removeEventListener('wheel', handleWheel);
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('gesturestart', handleGestureStart);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isScrolling) {
+      document.body.classList.add('is-scrolling');
+    } else {
+      document.body.classList.remove('is-scrolling');
+    }
+  }, [isScrolling]);
+
   useEffect(() => {
     localStorage.setItem('qaydlar_notes', JSON.stringify(notes));
   }, [notes]);
@@ -190,11 +313,17 @@ export default function App() {
   }, [notes]);
 
   const readingTime = useMemo(() => {
-    if (!currentNote) return '0 min o\'qish';
+    if (!currentNote) return '0 daqiqa';
     return calculateReadingTime(currentNote.content);
   }, [currentNote]);
 
   // Handlers
+  const handleToggleComplete = (id: string) => {
+    setNotes(prev => prev.map(note => 
+      note.id === id ? { ...note, completed: !note.completed } : note
+    ));
+  };
+
   const handleCreateNote = () => {
     const newNote: Note = {
       id: crypto.randomUUID(),
@@ -273,7 +402,13 @@ export default function App() {
     const days = [];
     // Adjust for Monday start if needed, but standard is Sunday (0)
     for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="h-12 sm:h-20" />);
+      days.push(
+        <div 
+          key={`empty-${i}`} 
+          className="h-12 sm:h-20 border-t border-l" 
+          style={{ borderColor: `${currentThemeStyles.border}20` }}
+        />
+      );
     }
     
     for (let d = 1; d <= daysInMonth; d++) {
@@ -302,6 +437,18 @@ export default function App() {
             </div>
           )}
         </div>
+      );
+    }
+    
+    // Fill remaining cells to complete the grid
+    const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+    for (let i = firstDay + daysInMonth; i < totalCells; i++) {
+      days.push(
+        <div 
+          key={`empty-end-${i}`} 
+          className="h-12 sm:h-20 border-t border-l" 
+          style={{ borderColor: `${currentThemeStyles.border}20` }}
+        />
       );
     }
     
@@ -364,7 +511,7 @@ export default function App() {
       <div className="w-full max-w-2xl min-h-screen flex flex-col relative z-10 px-4 py-6 md:px-8">
         
         {/* Top Bar */}
-        <header className="flex items-center justify-between mb-8">
+        <header className="flex items-center justify-between mb-6">
           {isEditing ? (
             <div className="flex items-center gap-2 opacity-60 text-xs font-medium uppercase tracking-widest">
               <Clock size={14} />
@@ -394,7 +541,7 @@ export default function App() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="flex flex-col flex-1"
+                className="flex flex-col flex-1 pb-6"
               >
                 <div className="flex items-center gap-4 mb-6">
                   <button 
@@ -404,7 +551,10 @@ export default function App() {
                     <ChevronLeft size={24} />
                   </button>
                   <input
+                    ref={titleInputRef}
                     type="text"
+                    autoFocus
+                    enterKeyHint="next"
                     placeholder="Sarlavha..."
                     value={currentNote.title}
                     onChange={(e) => handleUpdateNote(currentNote.id, { title: e.target.value })}
@@ -466,9 +616,9 @@ export default function App() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className="flex flex-col flex-1"
+                className="flex flex-col flex-1 pb-12"
               >
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center justify-between mb-6">
                   <h1 className="text-4xl font-bold tracking-tighter">Qaydlar</h1>
                   <div className="flex gap-2">
                     <button 
@@ -501,19 +651,25 @@ export default function App() {
                             key={note.id}
                             note={note}
                             currentThemeStyles={currentThemeStyles}
-                            getPaperStyle={getPaperStyle}
                             onEdit={() => {
                               setCurrentNoteId(note.id);
                               setIsEditing(true);
                               setIsLocked(true);
                             }}
-                            onDelete={() => handleDeleteNote(note.id)}
+                            onToggleComplete={() => handleToggleComplete(note.id)}
                           />
                         ))
                       ) : (
-                        <div className="col-span-full flex flex-col items-center justify-center py-20 opacity-30 text-center">
-                          <Plus size={48} className="mb-4" />
-                          <p>Hozircha hech qanday qayd yo'q</p>
+                        <div className="col-span-full flex flex-col items-center justify-center py-12 opacity-30 text-center">
+                          <svg width="40" height="40" viewBox="0 0 70 70" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-6">
+                            <path d="M42 69.5L34 60L40 53.5L49.5 62L42 69.5Z" fill={currentThemeStyles.text}/>
+                            <path d="M70 40L54 57.5L44 48L60.5 29L70 37V40Z" fill={currentThemeStyles.text}/>
+                            <path d="M44.5 0L0 4.5L7.5 65L11 66L32 60V54L56.5 25.5L53 4.5L44.5 0Z" fill={currentThemeStyles.text}/>
+                            <path d="M10.5 34.5V28.5L27 26V33.5L10.5 34.5Z" fill={currentThemeStyles.bg}/>
+                            <path d="M9 22L8 14L34.5 10.5L35.5 8.5L39 11L36.5 18.5L9 22Z" fill={currentThemeStyles.bg}/>
+                          </svg>
+                          <p className="text-lg font-medium">Hozircha hech qanday qayd yo'q</p>
+                          <p className="text-sm opacity-60 mt-2">Yangi qayd qo'shish uchun + tugmasini bosing</p>
                         </div>
                       )}
                     </div>
@@ -540,14 +696,14 @@ export default function App() {
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="fixed top-0 right-0 bottom-0 z-50 w-[280px] p-8 flex flex-col shadow-2xl"
+                className="fixed top-0 right-0 bottom-0 z-50 w-[290px] p-4 px-6 flex flex-col shadow-2xl"
                 style={{ 
                   backgroundColor: currentThemeStyles.bg,
                   color: currentThemeStyles.text,
                   borderLeft: `2px solid ${currentThemeStyles.border}20`
                 }}
               >
-                <div className="flex items-center justify-between mb-12">
+                <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold uppercase tracking-[0.2em]">Menyu</h3>
                   <button onClick={() => setShowSettings(false)} className="p-2 hover:rotate-90 transition-transform">
                     <X size={24} />
@@ -663,10 +819,10 @@ export default function App() {
                 </div>
 
                 {/* Version Info */}
-                <div className="mt-auto pt-8 border-t border-black/5 opacity-30 text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em]">Qaydlar v1.2.0</p>
-                  <p className="text-[8px] mt-1">© 2026 Barcha huquqlar himoyalangan</p>
-                </div>
+                <a href="http://kvantsystem.uz/" target="_blank" className="mt-auto pt-4 border-t border-black/5 opacity-30 text-center">
+                  <p className="text-[12px] font-bold uppercase tracking-[0.3em]">Qaydlar v1.2.0</p>
+                  <p className="text-[10px] mt-1">© 2026 Barcha huquqlar himoyalangan</p>
+                </a>
               </motion.div>
             </>
           )}

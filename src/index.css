@@ -8,12 +8,12 @@
 body {
   font-family: var(--font-sans);
   transition: background-color 0.3s ease, color 0.3s ease;
+  touch-action: pan-x pan-y;
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 2px;
-  background-color: #99999920;
+  width: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -21,7 +21,14 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: currentColor;
-  border-radius: 4px;
-  opacity: 0.2;
+  background: transparent;
+  border-radius: 10px;
+}
+
+body.is-scrolling::-webkit-scrollbar-thumb {
+  background: #99999940;
+}
+
+body.is-scrolling::-webkit-scrollbar-thumb:hover {
+  background: #99999960;
 }
