@@ -280,7 +280,7 @@ export default function App() {
         />
       )}
 
-      <div className="w-full max-w-2xl min-h-screen flex flex-col relative z-10 px-4 py-6 md:px-8">
+      <div className="w-full max-w-2xl min-h-screen flex flex-col relative z-10 px-4 pt-6 pb-1 md:px-8">
         <header className="flex items-center justify-between mb-6">
           <div />
           
@@ -316,7 +316,7 @@ export default function App() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className="flex flex-col flex-1 pb-12"
+                className="flex flex-col flex-1 pb-1"
               >
                 <div className="flex items-center justify-between mb-12">
                   <h1 className="text-4xl font-bold tracking-tighter">Qaydlar</h1>
@@ -378,7 +378,7 @@ export default function App() {
                         </button>
                       </div>
                     )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-[10px] pl-[1px]">
                       {filteredNotes.length > 0 ? (
                         filteredNotes.map(note => (
                           <NoteCard
@@ -413,17 +413,6 @@ export default function App() {
             )}
           </AnimatePresence>
         </main>
-
-        <footer className="mt-32 pb-8 text-center opacity-30 text-[10px] font-bold uppercase tracking-[0.2em]">
-          <a 
-            href="https://kvantsystem.uz" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="hover:opacity-100 transition-opacity"
-          >
-            Qaydlar v2.0 • Qaydlar [@2026 - kvant system]
-          </a>
-        </footer>
 
         <SettingsDrawer 
           showSettings={showSettings}
