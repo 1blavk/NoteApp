@@ -414,6 +414,17 @@ export default function App() {
           </AnimatePresence>
         </main>
 
+        <footer className="mt-32 pb-8 text-center opacity-30 text-[10px] font-bold uppercase tracking-[0.2em]">
+          <a 
+            href="https://kvantsystem.uz" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:opacity-100 transition-opacity"
+          >
+            Qaydlar v2.0 • Qaydlar [@2026 - kvant system]
+          </a>
+        </footer>
+
         <SettingsDrawer 
           showSettings={showSettings}
           setShowSettings={setShowSettings}

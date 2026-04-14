@@ -63,7 +63,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold uppercase tracking-[0.2em]">Menyu</h3>
+              <h3 className="text-xl font-bold uppercase tracking-[0.2em]">Sozlamalar</h3>
               <button onClick={() => setShowSettings(false)} className="p-2 hover:rotate-90 transition-transform">
                 <X size={24} />
               </button>
@@ -214,18 +214,18 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   </button>
                 </div>
               </div>
+              
+              <footer className="mt-20 pt-8 pb-4 text-center opacity-30 text-[10px] font-bold uppercase tracking-[0.2em]">
+                <a 
+                  href="https://kvantsystem.uz" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hover:opacity-100 transition-opacity"
+                >
+                  Qaydlar v2.0 • Qaydlar [@2026 - kvant system]
+                </a>
+              </footer>
             </div>
-
-            <footer className="mt-auto pt-8 pb-4 text-center opacity-30 text-[10px] font-bold uppercase tracking-[0.2em]">
-              <a 
-                href="https://kvantsystem.uz" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:opacity-100 transition-opacity"
-              >
-                Qaydlar v2.0 • Qaydlar [@2026 - kvant system]
-              </a>
-            </footer>
           </motion.div>
         </>
       )}
