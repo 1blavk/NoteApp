@@ -29,7 +29,7 @@ export const Calendar: React.FC<CalendarProps> = ({
     days.push(
       <div 
         key={`empty-${i}`} 
-        className="h-12 sm:h-20 border-t border-l" 
+        className="h-16 sm:h-20 border-t border-l" 
         style={{ borderColor: `${currentThemeStyles.border}20` }}
       />
     );
@@ -46,7 +46,7 @@ export const Calendar: React.FC<CalendarProps> = ({
     days.push(
       <div 
         key={d} 
-        className={`h-12 sm:h-20 border-t border-l flex flex-col p-1 sm:p-2 transition-colors hover:bg-black/5 cursor-pointer ${dayNotes.length > 0 ? 'font-bold' : 'opacity-40'}`}
+        className={`h-16 sm:h-20 border-t border-l flex flex-col p-1.5 sm:p-2 transition-colors hover:bg-black/5 cursor-pointer ${dayNotes.length > 0 ? 'font-bold' : 'opacity-40'}`}
         style={{ borderColor: `${currentThemeStyles.border}20` }}
         onClick={() => {
           if (dayNotes.length > 0) {
@@ -55,7 +55,7 @@ export const Calendar: React.FC<CalendarProps> = ({
           }
         }}
       >
-        <span className="text-xs">{d}</span>
+        <span className="text-sm sm:text-xs">{d}</span>
         {dayNotes.length > 0 && (
           <div className="mt-auto flex gap-1 flex-wrap">
             {dayNotes.slice(0, 3).map((_, i) => (
@@ -73,7 +73,7 @@ export const Calendar: React.FC<CalendarProps> = ({
     days.push(
       <div 
         key={`empty-end-${i}`} 
-        className="h-12 sm:h-20 border-t border-l" 
+        className="h-16 sm:h-20 border-t border-l" 
         style={{ borderColor: `${currentThemeStyles.border}20` }}
       />
     );
@@ -108,7 +108,7 @@ export const Calendar: React.FC<CalendarProps> = ({
         style={{ borderColor: `${currentThemeStyles.border}20` }}
       >
         {['Ya', 'Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sha'].map(day => (
-          <div key={day} className="h-10 flex items-center justify-center text-[10px] font-bold uppercase opacity-40 border-l border-t" style={{ borderColor: `${currentThemeStyles.border}20` }}>
+          <div key={day} className="h-12 flex items-center justify-center text-[10px] font-bold uppercase opacity-40 border-l border-t" style={{ borderColor: `${currentThemeStyles.border}20` }}>
             {day}
           </div>
         ))}
