@@ -1,8 +1,10 @@
-import React from 'react';
-import { ChevronLeft, Trash2, Pencil, Save } from 'lucide-react';
-import { motion } from 'motion/react';
+import React, { useState } from 'react';
+import { ChevronLeft, Trash2, Pencil, Save, Bell, List } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import Picker from 'react-mobile-picker';
 import { Note, ThemeStyles, FontSize } from '../types';
 import { FONT_SIZES, LINE_HEIGHTS } from '../constants';
+import { formatReminderTime } from '../utils';
 
 interface NoteEditorProps {
   currentNote: Note;
@@ -29,6 +31,51 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   fontSize,
   paperStyle
 }) => {
+  const [showPicker, setShowPicker] = useState(false);
+  const [isListMode, setIsListMode] = useState(false);
+
+  // Generate picker options
+  const days = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    return {
+      label: d.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' }),
+      value: d.toDateString()
+    };
+  });
+
+  const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+  const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+
+  const [pickerValue, setPickerValue] = useState(() => {
+    const date = currentNote.reminderAt ? new Date(currentNote.reminderAt) : new Date();
+    return {
+      day: date.toDateString(),
+      hour: date.getHours().toString().padStart(2, '0'),
+      minute: date.getMinutes().toString().padStart(2, '0')
+    };
+  });
+
+  const handlePickerChange = (newValue: any) => {
+    setPickerValue(newValue);
+    const date = new Date(newValue.day);
+    date.setHours(parseInt(newValue.hour));
+    date.setMinutes(parseInt(newValue.minute));
+    
+    if (date.getTime() < Date.now()) {
+      // If past time, don't update the note's reminderAt
+      // Optionally we could reset to current time, but for now just skip update
+      return;
+    }
+    
+    handleUpdateNote(currentNote.id, { reminderAt: date.getTime() });
+  };
+
+  const now = new Date();
+  const todayStr = now.toDateString();
+  const currentHourStr = now.getHours().toString().padStart(2, '0');
+  const currentMinuteStr = now.getMinutes().toString().padStart(2, '0');
+
   const getPaperStyle = (size: FontSize = 'O\'rta') => {
     if (paperStyle === 'Oddiy') return {};
     
@@ -60,6 +107,33 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     return {};
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isLocked) return;
+    
+    if (isListMode && e.key === 'Enter') {
+      e.preventDefault();
+      const { selectionStart, selectionEnd, value } = e.currentTarget;
+      const newValue = value.substring(0, selectionStart) + '\n • ' + value.substring(selectionEnd);
+      handleUpdateNote(currentNote.id, { content: newValue });
+      
+      // Set cursor position after the bullet
+      setTimeout(() => {
+        const target = e.target as HTMLTextAreaElement;
+        if (target) {
+          target.selectionStart = target.selectionEnd = selectionStart + 4;
+        }
+      }, 0);
+    }
+  };
+
+  const toggleListMode = () => {
+    const newMode = !isListMode;
+    setIsListMode(newMode);
+    if (newMode && !currentNote.content.trim()) {
+      handleUpdateNote(currentNote.id, { content: ' • ' });
+    }
+  };
+
   return (
     <motion.div 
       key="editor"
@@ -87,11 +161,36 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
           readOnly={isLocked}
         />
       </div>
+
+      <div className="px-4 mb-4 flex items-center gap-2">
+        <button
+          onClick={() => !isLocked && setShowPicker(true)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wider transition-all ${isLocked ? 'opacity-40' : 'hover:bg-black/5'}`}
+          style={{ borderColor: `${currentThemeStyles.border}20` }}
+        >
+          <Bell size={14} />
+          <span>{formatReminderTime(currentNote.reminderAt)}</span>
+        </button>
+
+        <button
+          onClick={() => !isLocked && toggleListMode()}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wider transition-all ${isLocked ? 'opacity-40' : ''} ${isListMode ? '' : 'hover:bg-black/5'}`}
+          style={{ 
+            borderColor: `${currentThemeStyles.border}20`,
+            backgroundColor: isListMode ? currentThemeStyles.text : 'transparent',
+            color: isListMode ? currentThemeStyles.bg : 'inherit'
+          }}
+        >
+          <List size={14} />
+          <span>Ro'yxat</span>
+        </button>
+      </div>
       
       <textarea
-        placeholder="Fikrlaringizni shu yerga yozing..."
+        placeholder="Fikr, maqsad, qilish kerak bo'lgan ishlaringizni shu yerga yozing..."
         value={currentNote.content}
         onChange={(e) => handleUpdateNote(currentNote.id, { content: e.target.value })}
+        onKeyDown={handleKeyDown}
         className={`flex-1 bg-transparent resize-none focus:outline-none placeholder:opacity-30 px-4 pb-4 ${FONT_SIZES[fontSize]}`}
         readOnly={isLocked}
         style={getPaperStyle(fontSize)}
@@ -134,6 +233,104 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
           </button>
         )}
       </div>
+
+      <AnimatePresence>
+        {showPicker && (
+          <div className="fixed inset-0 z-[110] flex items-end justify-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowPicker(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              className="relative z-10 w-full max-w-2xl p-6 rounded-t-2xl shadow-2xl border-t-2"
+              style={{ 
+                backgroundColor: currentThemeStyles.bg,
+                color: currentThemeStyles.text,
+                borderColor: currentThemeStyles.border
+              }}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-bold uppercase tracking-widest">Vaqtni belgilash</h3>
+                  {(() => {
+                    const date = new Date(pickerValue.day);
+                    date.setHours(parseInt(pickerValue.hour));
+                    date.setMinutes(parseInt(pickerValue.minute));
+                    if (date.getTime() < Date.now()) {
+                      return <p className="text-[10px] text-red-500 font-bold uppercase">Vaqt o'tib ketgan!</p>;
+                    }
+                    return null;
+                  })()}
+                </div>
+                <button 
+                  onClick={() => {
+                    const date = new Date(pickerValue.day);
+                    date.setHours(parseInt(pickerValue.hour));
+                    date.setMinutes(parseInt(pickerValue.minute));
+                    
+                    if (date.getTime() < Date.now()) {
+                      const now = new Date();
+                      const resetValue = {
+                        day: now.toDateString(),
+                        hour: now.getHours().toString().padStart(2, '0'),
+                        minute: now.getMinutes().toString().padStart(2, '0')
+                      };
+                      setPickerValue(resetValue);
+                      handleUpdateNote(currentNote.id, { reminderAt: now.getTime() });
+                    }
+                    setShowPicker(false);
+                  }}
+                  className="p-2 border-2 rounded-sm font-bold"
+                  style={{ borderColor: currentThemeStyles.border }}
+                >
+                  Tayyor
+                </button>
+              </div>
+
+              <div className="h-48">
+                <Picker value={pickerValue} onChange={handlePickerChange} wheelMode="natural">
+                  {/* @ts-ignore */}
+                  <Picker.Column name="day">
+                    {days.map(day => (
+                      <Picker.Item key={day.value} value={day.value}>
+                        <div className={day.value === todayStr ? 'font-black scale-110' : ''}>
+                          {day.label}
+                        </div>
+                      </Picker.Item>
+                    ))}
+                  </Picker.Column>
+                  {/* @ts-ignore */}
+                  <Picker.Column name="hour">
+                    {hours.map(hour => (
+                      <Picker.Item key={hour} value={hour}>
+                        <div className={hour === currentHourStr ? 'font-black scale-110' : ''}>
+                          {hour}
+                        </div>
+                      </Picker.Item>
+                    ))}
+                  </Picker.Column>
+                  {/* @ts-ignore */}
+                  <Picker.Column name="minute">
+                    {minutes.map(minute => (
+                      <Picker.Item key={minute} value={minute}>
+                        <div className={minute === currentMinuteStr ? 'font-black scale-110' : ''}>
+                          {minute}
+                        </div>
+                      </Picker.Item>
+                    ))}
+                  </Picker.Column>
+                </Picker>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

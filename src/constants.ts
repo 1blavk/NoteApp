@@ -8,9 +8,11 @@ export const THEMES: Record<Theme, ThemeStyles> = {
 
 export const BACKGROUND_IMAGES = [
   { id: 'none', name: 'Yo\'q', url: '' },
-  { id: 'Nature', name: 'Kun', url: 'https://i.pinimg.com/736x/25/8d/ed/258ded0b868d38b2e513d477c66b05f9.jpg' },
-  { id: 'forest', name: "O'rmon", url: 'https://i.pinimg.com/736x/14/85/1d/14851d161855fc11e842fd392dc6340b.jpg' },
-  { id: 'mountains', name: 'Tog\'lar', url: 'https://i.pinimg.com/736x/d6/1d/fe/d61dfea97ca56afd51cb74f795b6035e.jpg' },
+  { id: 'themoon', name: 'Oy', url: 'https://i.pinimg.com/736x/d8/e1/79/d8e1790ca78a09f6774f00031cffb236.jpg' }, 
+  { id: 'mountain', name: 'tog', url: 'https://i.pinimg.com/736x/2d/86/ea/2d86ea24768f03ac02fd365e3fe3b252.jpg' },
+  { id: 'picnik', name: "Pik Nik", url: 'https://i.pinimg.com/736x/8e/7f/6c/8e7f6cff7e25d3a2d9366e39eb18bf13.jpg' },
+  { id: 'samarkand', name: 'Samarkand', url: 'https://i.pinimg.com/736x/a1/a1/38/a1a13816eb84ab25d9bd562e3f7f1990.jpg' },
+  { id: 'rain', name: 'Yomgir', url: 'https://i.pinimg.com/736x/15/d1/14/15d114562e398c432e2aa3b71dbd14ec.jpg' },
 ];
 
 export const FONT_SIZES: Record<FontSize, string> = {

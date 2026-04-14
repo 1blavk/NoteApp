@@ -12,6 +12,7 @@ import {
   Calendar as CalendarIcon,
   List as ListIcon,
   Menu,
+  BarChart2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -22,7 +23,7 @@ import { Note, Theme, FontSize, PaperStyle, ViewMode } from './types';
 import { THEMES } from './constants';
 
 // --- Utils ---
-import { calculateReadingTime, formatDateUz } from './utils';
+import { formatDateUz } from './utils';
 
 // --- Components ---
 import { NoteCard } from './components/NoteCard';
@@ -30,6 +31,7 @@ import { Calendar } from './components/Calendar';
 import { SettingsDrawer } from './components/SettingsDrawer';
 import { NoteEditor } from './components/NoteEditor';
 import { DeleteModal } from './components/DeleteModal';
+import { Analytics } from './components/Analytics';
 
 export default function App() {
   // State
@@ -137,6 +139,19 @@ export default function App() {
   }, [notes]);
 
   useEffect(() => {
+    if (notes.length === 0) {
+      const welcomeNote: Note = {
+        id: 'welcome',
+        title: 'Xush kelibsiz!',
+        content: 'Bu sizning birinchi qaydingiz. Uni tahrirlashingiz yoki o\'chirishingiz mumkin.',
+        updatedAt: Date.now(),
+        createdAt: Date.now(),
+      };
+      setNotes([welcomeNote]);
+    }
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('qaydlar_theme', theme);
   }, [theme]);
 
@@ -160,21 +175,37 @@ export default function App() {
     localStorage.setItem('qaydlar_vibration', String(vibrationEnabled));
   }, [vibrationEnabled]);
 
+  // Reminder Checker
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      notes.forEach(note => {
+        if (!note.completed && note.reminderAt && Math.abs(note.reminderAt - now) < 30000) { // Within 30 seconds
+          if (soundEnabled) {
+            // Ring sound for reminder
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/1350/1350-preview.mp3');
+            audio.play().catch(() => {});
+          }
+        }
+      });
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [notes, soundEnabled]);
+
   // Derived State
   const currentNote = useMemo(() => notes.find(n => n.id === currentNoteId), [notes, currentNoteId]);
   
   const filteredNotes = useMemo(() => {
     let result = [...notes];
     if (filterDate) {
-      result = result.filter(n => new Date(n.updatedAt).toDateString() === filterDate);
+      result = result.filter(n => {
+        const noteDate = n.reminderAt ? new Date(n.reminderAt) : new Date(n.updatedAt);
+        return noteDate.toDateString() === filterDate;
+      });
     }
     return result.sort((a, b) => b.updatedAt - a.updatedAt);
   }, [notes, filterDate]);
-
-  const readingTime = useMemo(() => {
-    if (!currentNote) return '0 daqiqa';
-    return calculateReadingTime(currentNote.content);
-  }, [currentNote]);
 
   // Handlers
   const handleToggleComplete = (id: string) => {
@@ -183,6 +214,7 @@ export default function App() {
         const newCompleted = !note.completed;
         if (newCompleted) {
           if (soundEnabled) {
+            // Check mark sound effect
             const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
             audio.play().catch(() => {});
           }
@@ -202,6 +234,8 @@ export default function App() {
       title: '',
       content: '',
       updatedAt: Date.now(),
+      createdAt: Date.now(),
+      reminderAt: Date.now(),
     };
     setNotes([newNote, ...notes]);
     setCurrentNoteId(newNote.id);
@@ -248,14 +282,7 @@ export default function App() {
 
       <div className="w-full max-w-2xl min-h-screen flex flex-col relative z-10 px-4 py-6 md:px-8">
         <header className="flex items-center justify-between mb-6">
-          {isEditing ? (
-            <div className="flex items-center gap-2 opacity-60 text-xs font-medium uppercase tracking-widest">
-              <Clock size={14} />
-              <span>{readingTime}</span>
-            </div>
-          ) : (
-            <div />
-          )}
+          <div />
           
           <div className="flex items-center gap-4">
             <button 
@@ -291,9 +318,17 @@ export default function App() {
                 exit={{ opacity: 0, x: 20 }}
                 className="flex flex-col flex-1 pb-12"
               >
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-12">
                   <h1 className="text-4xl font-bold tracking-tighter">Qaydlar</h1>
                   <div className="flex gap-2">
+                    <button 
+                      onClick={() => setViewMode('Analitika')}
+                      className="p-3 rounded-full border-2 hover:scale-110 transition-transform"
+                      style={{ borderColor: currentThemeStyles.border }}
+                      title="Analitika"
+                    >
+                      <BarChart2 size={24} />
+                    </button>
                     <button 
                       onClick={() => setViewMode(viewMode === 'Ro\'yxat' ? 'Taqvim' : 'Ro\'yxat')}
                       className="p-3 rounded-full border-2 hover:scale-110 transition-transform"
@@ -312,7 +347,13 @@ export default function App() {
                   </div>
                 </div>
 
-                {viewMode === 'Taqvim' ? (
+                {viewMode === 'Analitika' ? (
+                  <Analytics 
+                    notes={notes}
+                    currentThemeStyles={currentThemeStyles}
+                    onBack={() => setViewMode('Ro\'yxat')}
+                  />
+                ) : viewMode === 'Taqvim' ? (
                   <Calendar 
                     currentMonth={currentMonth}
                     setCurrentMonth={setCurrentMonth}

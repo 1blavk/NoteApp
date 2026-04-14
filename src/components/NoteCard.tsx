@@ -2,7 +2,7 @@ import React from 'react';
 import { Clock, CheckCircle2, Circle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Note, ThemeStyles } from '../types';
-import { calculateReadingTime } from '../utils';
+import { formatReminderTime } from '../utils';
 
 interface NoteCardProps {
   note: Note;
@@ -42,7 +42,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               }}
               className="relative flex items-center justify-center p-1"
             >
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="wait" initial={false}>
               {note.completed ? (
                 <motion.div
                   key="completed"
@@ -66,14 +66,18 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               )}
             </AnimatePresence>
             
-            {note.completed && (
-              <motion.div 
-                initial={{ scale: 0.8, opacity: 0.5 }}
-                animate={{ scale: 1.5, opacity: 0 }}
-                transition={{ duration: 0.5 }}
-                className="absolute inset-0 border-2 border-green-500 rounded-full pointer-events-none"
-              />
-            )}
+            <AnimatePresence initial={false}>
+              {note.completed && (
+                <motion.div 
+                  key="ripple"
+                  initial={{ scale: 0.8, opacity: 0.5 }}
+                  animate={{ scale: 1.5, opacity: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="absolute inset-0 border-2 border-green-500 rounded-full pointer-events-none"
+                />
+              )}
+            </AnimatePresence>
           </button>
         </div>
       </div>
@@ -81,13 +85,16 @@ export const NoteCard: React.FC<NoteCardProps> = ({
       <div className="flex justify-between items-end mt-auto">
         <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 flex items-center gap-1">
           <Clock size={10} />
-          <span>{calculateReadingTime(note.content)}</span>
+          <span>{formatReminderTime(note.reminderAt)}</span>
         </div>
         <div className="text-[10px] font-bold uppercase tracking-widest opacity-40">
-          {new Date(note.updatedAt).toLocaleString('uz-UZ', { 
-            day: 'numeric', 
-            month: 'short'
-          })}
+          {(() => {
+            const date = new Date(note.updatedAt);
+            return isNaN(date.getTime()) ? "Noma'lum" : date.toLocaleString('uz-UZ', { 
+              day: 'numeric', 
+              month: 'short'
+            });
+          })()}
         </div>
       </div>
     </div>

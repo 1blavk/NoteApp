@@ -55,7 +55,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 bottom-0 z-50 w-[290px] p-4 px-6 flex flex-col shadow-2xl"
+            className="fixed top-0 right-0 bottom-0 z-50 w-[290px] pt-4 px-6 pb-2 flex flex-col shadow-2xl"
             style={{ 
               backgroundColor: currentThemeStyles.bg,
               color: currentThemeStyles.text,
@@ -223,7 +223,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 rel="noopener noreferrer"
                 className="hover:opacity-100 transition-opacity"
               >
-                Qaydlar v2.0 • Shaxsiy qaydnomangiz
+                Qaydlar v2.0 • Qaydlar [@2026 - kvant system]
               </a>
             </footer>
           </motion.div>

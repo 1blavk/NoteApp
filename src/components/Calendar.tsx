@@ -38,7 +38,10 @@ export const Calendar: React.FC<CalendarProps> = ({
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(year, month, d);
     const dateString = date.toDateString();
-    const dayNotes = notes.filter(n => new Date(n.updatedAt).toDateString() === dateString);
+    const dayNotes = notes.filter(n => {
+      const noteDate = n.reminderAt ? new Date(n.reminderAt) : new Date(n.updatedAt);
+      return noteDate.toDateString() === dateString;
+    });
     
     days.push(
       <div 

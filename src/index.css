@@ -32,3 +32,32 @@ body.is-scrolling::-webkit-scrollbar-thumb {
 body.is-scrolling::-webkit-scrollbar-thumb:hover {
   background: #99999960;
 }
+
+/* Picker Styles */
+.picker-container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.picker-column {
+  flex: 1;
+  height: 100%;
+  position: relative;
+}
+
+.picker-item {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.picker-item-selected {
+  opacity: 1;
+  font-weight: bold;
+}
