@@ -38,21 +38,37 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   const days = Array.from({ length: 30 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
+    
+    let label = d.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' });
+    const dateStr = d.toDateString();
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+
+    if (dateStr === today.toDateString()) {
+      label = 'Bugun';
+    } else if (dateStr === tomorrow.toDateString()) {
+      label = 'Ertaga';
+    }
+
     return {
-      label: d.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' }),
-      value: d.toDateString()
+      label,
+      value: dateStr
     };
   });
 
   const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
-  const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+  const minutes = ['00', '10', '20', '30', '40', '50'];
 
   const [pickerValue, setPickerValue] = useState(() => {
     const date = currentNote.reminderAt ? new Date(currentNote.reminderAt) : new Date();
+    const roundedMinutes = Math.round(date.getMinutes() / 10) * 10;
+    const finalMinutes = roundedMinutes === 60 ? 50 : roundedMinutes; // Keep it within 0-50
+    
     return {
       day: date.toDateString(),
       hour: date.getHours().toString().padStart(2, '0'),
-      minute: date.getMinutes().toString().padStart(2, '0')
+      minute: finalMinutes.toString().padStart(2, '0')
     };
   });
 
@@ -74,7 +90,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   const now = new Date();
   const todayStr = now.toDateString();
   const currentHourStr = now.getHours().toString().padStart(2, '0');
-  const currentMinuteStr = now.getMinutes().toString().padStart(2, '0');
+  const currentMinuteStr = (Math.round(now.getMinutes() / 10) * 10 % 60).toString().padStart(2, '0');
 
   const getPaperStyle = (size: FontSize = 'O\'rta') => {
     if (paperStyle === 'Oddiy') return {};
@@ -320,7 +336,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     {minutes.map(minute => (
                       <Picker.Item key={minute} value={minute}>
                         <div className={minute === currentMinuteStr ? 'font-black scale-110' : ''}>
-                          {minute}
+                          {minute === '00' ? minute : `${minute} daq`}
                         </div>
                       </Picker.Item>
                     ))}

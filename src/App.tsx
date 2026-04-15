@@ -33,12 +33,13 @@ import { NoteEditor } from './components/NoteEditor';
 import { DeleteModal } from './components/DeleteModal';
 import { Analytics } from './components/Analytics';
 
+// --- Services ---
+import { getAllNotes, saveNote, deleteNoteFromDB, saveAllNotes } from './services/db';
+
 export default function App() {
   // State
-  const [notes, setNotes] = useState<Note[]>(() => {
-    const saved = localStorage.getItem('qaydlar_notes');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [isDBLoaded, setIsDBLoaded] = useState(false);
   const [currentNoteId, setCurrentNoteId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [theme, setTheme] = useState<Theme>(() => {
@@ -134,23 +135,44 @@ export default function App() {
     }
   }, [isScrolling]);
 
+  // Load notes from IndexedDB on mount
   useEffect(() => {
-    localStorage.setItem('qaydlar_notes', JSON.stringify(notes));
-  }, [notes]);
-
-  useEffect(() => {
-    if (notes.length === 0) {
-      const welcomeNote: Note = {
-        id: 'welcome',
-        title: 'Xush kelibsiz!',
-        content: 'Bu sizning birinchi qaydingiz. Uni tahrirlashingiz yoki o\'chirishingiz mumkin.',
-        updatedAt: Date.now(),
-        createdAt: Date.now(),
-      };
-      setNotes([welcomeNote]);
-    }
+    const loadNotes = async () => {
+      try {
+        const savedNotes = await getAllNotes();
+        if (savedNotes.length > 0) {
+          setNotes(savedNotes);
+        } else {
+          // Check localStorage for migration
+          const legacyNotes = localStorage.getItem('qaydlar_notes');
+          if (legacyNotes) {
+            const parsed = JSON.parse(legacyNotes);
+            setNotes(parsed);
+            await saveAllNotes(parsed);
+            // Optionally clear localStorage
+            // localStorage.removeItem('qaydlar_notes');
+          } else {
+            const welcomeNote: Note = {
+              id: 'welcome',
+              title: 'Xush kelibsiz!',
+              content: 'Bu sizning birinchi qaydingiz. Uni tahrirlashingiz yoki o\'chirishingiz mumkin.',
+              updatedAt: Date.now(),
+              createdAt: Date.now(),
+            };
+            setNotes([welcomeNote]);
+            await saveNote(welcomeNote);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load notes from IndexedDB:', error);
+      } finally {
+        setIsDBLoaded(true);
+      }
+    };
+    loadNotes();
   }, []);
 
+  // Persistence (Settings still use localStorage for simplicity as they are small)
   useEffect(() => {
     localStorage.setItem('qaydlar_theme', theme);
   }, [theme]);
@@ -200,32 +222,36 @@ export default function App() {
     let result = [...notes];
     if (filterDate) {
       result = result.filter(n => {
-        const noteDate = n.reminderAt ? new Date(n.reminderAt) : new Date(n.updatedAt);
+        const noteDate = n.reminderAt ? new Date(n.reminderAt) : new Date(n.createdAt);
         return noteDate.toDateString() === filterDate;
       });
     }
-    return result.sort((a, b) => b.updatedAt - a.updatedAt);
+    return result.sort((a, b) => b.createdAt - a.createdAt);
   }, [notes, filterDate]);
 
   // Handlers
   const handleToggleComplete = (id: string) => {
-    setNotes(prev => prev.map(note => {
-      if (note.id === id) {
-        const newCompleted = !note.completed;
-        if (newCompleted) {
-          if (soundEnabled) {
-            // Check mark sound effect
-            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
-            audio.play().catch(() => {});
+    setNotes(prev => {
+      const updatedNotes = prev.map(note => {
+        if (note.id === id) {
+          const newCompleted = !note.completed;
+          if (newCompleted) {
+            if (soundEnabled) {
+              const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+              audio.play().catch(() => {});
+            }
+            if (vibrationEnabled && 'vibrate' in navigator) {
+              navigator.vibrate(50);
+            }
           }
-          if (vibrationEnabled && 'vibrate' in navigator) {
-            navigator.vibrate(50);
-          }
+          const updatedNote = { ...note, completed: newCompleted };
+          saveNote(updatedNote); // Async save
+          return updatedNote;
         }
-        return { ...note, completed: newCompleted };
-      }
-      return note;
-    }));
+        return note;
+      });
+      return updatedNotes;
+    });
   };
 
   const handleCreateNote = () => {
@@ -238,6 +264,7 @@ export default function App() {
       reminderAt: Date.now(),
     };
     setNotes([newNote, ...notes]);
+    saveNote(newNote); // Async save
     setCurrentNoteId(newNote.id);
     setIsEditing(true);
     setIsLocked(false);
@@ -245,16 +272,24 @@ export default function App() {
   };
 
   const handleUpdateNote = (id: string, updates: Partial<Note>) => {
-    setNotes(notes.map(n => n.id === id ? { ...n, ...updates, updatedAt: Date.now() } : n));
+    setNotes(prev => prev.map(n => {
+      if (n.id === id) {
+        const updated = { ...n, ...updates, updatedAt: Date.now() };
+        saveNote(updated); // Async save
+        return updated;
+      }
+      return n;
+    }));
   };
 
   const handleDeleteNote = (id: string) => {
     setNoteToDeleteId(id);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (noteToDeleteId) {
       setNotes(notes.filter(n => n.id !== noteToDeleteId));
+      await deleteNoteFromDB(noteToDeleteId);
       if (currentNoteId === noteToDeleteId) {
         setCurrentNoteId(null);
         setIsEditing(false);
@@ -281,7 +316,13 @@ export default function App() {
       )}
 
       <div className="w-full max-w-2xl min-h-screen flex flex-col relative z-10 px-4 pt-6 pb-1 md:px-8">
-        <header className="flex items-center justify-between mb-6">
+        {!isDBLoaded ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: `${currentThemeStyles.text}40`, borderTopColor: 'transparent' }} />
+          </div>
+        ) : (
+          <>
+            <header className="flex items-center justify-between mb-6">
           <div />
           
           <div className="flex items-center gap-4">
@@ -438,6 +479,8 @@ export default function App() {
           onConfirm={confirmDelete}
           currentThemeStyles={currentThemeStyles}
         />
+          </>
+        )}
       </div>
     </div>
   );

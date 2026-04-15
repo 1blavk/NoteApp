@@ -43,20 +43,20 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     <AnimatePresence>
       {showSettings && (
         <>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setShowSettings(false)}
             className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
           />
-          <motion.div 
+          <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed top-0 right-0 bottom-0 z-50 w-[290px] pt-4 px-6 pb-2 flex flex-col shadow-2xl"
-            style={{ 
+            style={{
               backgroundColor: currentThemeStyles.bg,
               color: currentThemeStyles.text,
               borderLeft: `2px solid ${currentThemeStyles.border}20`
@@ -82,7 +82,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       key={size}
                       onClick={() => setFontSize(size)}
                       className={`w-full py-3 px-4 text-left border-2 rounded-sm transition-all flex justify-between items-center ${fontSize === size ? 'font-bold' : 'opacity-40'}`}
-                      style={{ 
+                      style={{
                         borderColor: fontSize === size ? currentThemeStyles.border : `${currentThemeStyles.border}20`,
                         backgroundColor: fontSize === size ? `${currentThemeStyles.text}10` : 'transparent'
                       }}
@@ -106,7 +106,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       key={style}
                       onClick={() => setPaperStyle(style)}
                       className={`w-full py-3 px-4 text-left border-2 rounded-sm transition-all flex justify-between items-center ${paperStyle === style ? 'font-bold' : 'opacity-40'}`}
-                      style={{ 
+                      style={{
                         borderColor: paperStyle === style ? currentThemeStyles.border : `${currentThemeStyles.border}20`,
                         backgroundColor: paperStyle === style ? `${currentThemeStyles.text}10` : 'transparent'
                       }}
@@ -130,7 +130,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       key={t}
                       onClick={() => setTheme(t)}
                       className={`w-full py-3 px-4 text-left border-2 rounded-sm transition-all flex justify-between items-center ${theme === t ? 'font-bold' : 'opacity-40'}`}
-                      style={{ 
+                      style={{
                         borderColor: theme === t ? currentThemeStyles.border : `${currentThemeStyles.border}20`,
                         backgroundColor: theme === t ? `${currentThemeStyles.text}10` : 'transparent'
                       }}
@@ -186,7 +186,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   <button
                     onClick={() => setSoundEnabled(!soundEnabled)}
                     className={`w-full py-3 px-4 text-left border-2 rounded-sm transition-all flex justify-between items-center ${soundEnabled ? 'font-bold' : 'opacity-40'}`}
-                    style={{ 
+                    style={{
                       borderColor: soundEnabled ? currentThemeStyles.border : `${currentThemeStyles.border}20`,
                       backgroundColor: soundEnabled ? `${currentThemeStyles.text}10` : 'transparent'
                     }}
@@ -201,7 +201,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   <button
                     onClick={() => setVibrationEnabled(!vibrationEnabled)}
                     className={`w-full py-3 px-4 text-left border-2 rounded-sm transition-all flex justify-between items-center ${vibrationEnabled ? 'font-bold' : 'opacity-40'}`}
-                    style={{ 
+                    style={{
                       borderColor: vibrationEnabled ? currentThemeStyles.border : `${currentThemeStyles.border}20`,
                       backgroundColor: vibrationEnabled ? `${currentThemeStyles.text}10` : 'transparent'
                     }}
@@ -216,13 +216,17 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               </div>
 
               <footer className="mt-20 pt-8 pb-4 text-center opacity-30 text-[10px] font-bold uppercase tracking-[0.2em]">
-                <a 
-                  href="https://kvantsystem.uz" 
-                  target="_blank" 
+                <a
+                  href="https://kvantsystem.uz"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="hover:opacity-100 transition-opacity"
                 >
-                  Qaydlar v2.0 • Qaydlar [@2026 - kvant system]
+                  Qaydlar Yuritish v1.0
+                  <br />
+                  •••
+                  <br />
+                  [@2026 - kvant system]
                 </a>
               </footer>
             </div>

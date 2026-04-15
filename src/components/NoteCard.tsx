@@ -89,7 +89,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
         </div>
         <div className="text-[10px] font-bold uppercase tracking-widest opacity-40">
           {(() => {
-            const date = new Date(note.updatedAt);
+            const date = new Date(note.createdAt);
             return isNaN(date.getTime()) ? "Noma'lum" : date.toLocaleString('uz-UZ', { 
               day: 'numeric', 
               month: 'short'

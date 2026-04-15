@@ -39,7 +39,7 @@ export const Calendar: React.FC<CalendarProps> = ({
     const date = new Date(year, month, d);
     const dateString = date.toDateString();
     const dayNotes = notes.filter(n => {
-      const noteDate = n.reminderAt ? new Date(n.reminderAt) : new Date(n.updatedAt);
+      const noteDate = n.reminderAt ? new Date(n.reminderAt) : new Date(n.createdAt);
       return noteDate.toDateString() === dateString;
     });
     
