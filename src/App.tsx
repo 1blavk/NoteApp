@@ -402,6 +402,7 @@ export default function App() {
                     currentThemeStyles={currentThemeStyles}
                     setFilterDate={setFilterDate}
                     setViewMode={setViewMode}
+                    filterDate={filterDate}
                   />
                 ) : (
                   <>
