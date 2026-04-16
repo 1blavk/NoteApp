@@ -92,7 +92,7 @@ export const Calendar: React.FC<CalendarProps> = ({
       >
         <div className="relative inline-flex items-center justify-center w-6 h-6">
           {isSelected && d > 0 && (
-            <ScribbleMark color="#ffffff" />
+            <ScribbleMark color={currentThemeStyles.text} />
           )}
           <span className="text-sm sm:text-xs relative z-10">{d}</span>
         </div>
