@@ -32,9 +32,10 @@ import { SettingsDrawer } from './components/SettingsDrawer';
 import { NoteEditor } from './components/NoteEditor';
 import { DeleteModal } from './components/DeleteModal';
 import { Analytics } from './components/Analytics';
+import { ConfirmationModal } from './components/ConfirmationModal';
 
 // --- Services ---
-import { getAllNotes, saveNote, deleteNoteFromDB, saveAllNotes } from './services/db';
+import { getAllNotes, saveNote, deleteNoteFromDB, saveAllNotes, clearAllNotes } from './services/db';
 
 export default function App() {
   // State
@@ -49,6 +50,7 @@ export default function App() {
   const [fontSize, setFontSize] = useState<FontSize>(() => (localStorage.getItem('qaydlar_font_size') as FontSize) || 'O\'rta');
   const [showSettings, setShowSettings] = useState(false);
   const [noteToDeleteId, setNoteToDeleteId] = useState<string | null>(null);
+  const [showExportClearConfirm, setShowExportClearConfirm] = useState(false);
   const [isLocked, setIsLocked] = useState(true);
   const [paperStyle, setPaperStyle] = useState<PaperStyle>(() => (localStorage.getItem('qaydlar_paper_style') as PaperStyle) || 'Oddiy');
   const [bgImage, setBgImage] = useState<string>(() => localStorage.getItem('qaydlar_bg_image') || '');
@@ -298,6 +300,51 @@ export default function App() {
     }
   };
 
+  const handleBackFromEditor = () => {
+    if (currentNote) {
+      const isEmpty = !currentNote.title.trim() && !currentNote.content.trim();
+      if (isEmpty) {
+        // Discard empty note
+        setNotes(prev => prev.filter(n => n.id !== currentNote.id));
+        deleteNoteFromDB(currentNote.id);
+      }
+    }
+    setIsEditing(false);
+    setCurrentNoteId(null);
+  };
+
+  const handleImportNotes = async (importedNotes: Note[]) => {
+    try {
+      // Merge or overwrite? Let's merge by ID, newer updates win
+      const currentNotesMap = new Map<string, Note>(notes.map(n => [n.id, n]));
+      
+      importedNotes.forEach((newNote: Note) => {
+        const existing = currentNotesMap.get(newNote.id);
+        if (!existing || (newNote.updatedAt || 0) > (existing.updatedAt || 0)) {
+          currentNotesMap.set(newNote.id, newNote);
+        }
+      });
+      
+      const mergedNotes = Array.from(currentNotesMap.values());
+      setNotes(mergedNotes);
+      await saveAllNotes(mergedNotes);
+    } catch (error) {
+      console.error('Failed to import notes:', error);
+      alert('Ma\'lumotlarni bazaga saqlashda xatolik yuz berdi.');
+    }
+  };
+
+  const handleClearAllNotes = async () => {
+    try {
+      await clearAllNotes();
+      setNotes([]);
+      alert('Barcha qaydlar o\'chirib tashlandi.');
+    } catch (error) {
+      console.error('Failed to clear notes:', error);
+      alert('Ma\'lumotlarni tozalashda xatolik yuz berdi.');
+    }
+  };
+
   const currentThemeStyles = THEMES[theme];
 
   return (
@@ -343,7 +390,7 @@ export default function App() {
                 currentNote={currentNote}
                 isLocked={isLocked}
                 setIsLocked={setIsLocked}
-                setIsEditing={setIsEditing}
+                onBack={handleBackFromEditor}
                 handleUpdateNote={handleUpdateNote}
                 handleDeleteNote={handleDeleteNote}
                 titleInputRef={titleInputRef}
@@ -472,12 +519,30 @@ export default function App() {
           setSoundEnabled={setSoundEnabled}
           vibrationEnabled={vibrationEnabled}
           setVibrationEnabled={setVibrationEnabled}
+          notes={notes}
+          onImport={handleImportNotes}
+          onClearAll={handleClearAllNotes}
+          onExportSuccess={() => setShowExportClearConfirm(true)}
         />
 
         <DeleteModal 
           noteToDeleteId={noteToDeleteId}
           onCancel={() => setNoteToDeleteId(null)}
           onConfirm={confirmDelete}
+          currentThemeStyles={currentThemeStyles}
+        />
+
+        <ConfirmationModal 
+          isOpen={showExportClearConfirm}
+          title="Tozalash"
+          message="Qaydlar muvaffaqiyatli eksport qilindi. Endi hamma qaydlarni tozalab tashlashni xohlaysizmi?"
+          confirmLabel="Ha"
+          cancelLabel="Bekor qilish"
+          onConfirm={() => {
+            handleClearAllNotes();
+            setShowExportClearConfirm(false);
+          }}
+          onCancel={() => setShowExportClearConfirm(false)}
           currentThemeStyles={currentThemeStyles}
         />
           </>

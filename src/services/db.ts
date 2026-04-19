@@ -30,3 +30,7 @@ export const deleteNoteFromDB = async (id: string): Promise<void> => {
 export const saveAllNotes = async (notes: Note[]): Promise<void> => {
   await db.notes.bulkPut(notes);
 };
+
+export const clearAllNotes = async (): Promise<void> => {
+  await db.notes.clear();
+};

@@ -1,12 +1,12 @@
 import React from 'react';
-import { X, Type, LayoutGrid, Palette, Image as ImageIcon, Bell, Volume2, Vibrate } from 'lucide-react';
+import { X, Type, LayoutGrid, Palette, Image as ImageIcon, Bell, Volume2, Vibrate, Download, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Theme, FontSize, PaperStyle, ThemeStyles } from '../types';
+import { Theme, FontSize, PaperStyle, ThemeStyles, Note } from '../types';
 import { THEMES, FONT_SIZES, BACKGROUND_IMAGES } from '../constants';
 
 interface SettingsDrawerProps {
   showSettings: boolean;
-  setShowSettings: (show: boolean) => void;
+  setShowSettings: (show) => void;
   currentThemeStyles: ThemeStyles;
   fontSize: FontSize;
   setFontSize: (size: FontSize) => void;
@@ -20,6 +20,10 @@ interface SettingsDrawerProps {
   setSoundEnabled: (enabled: boolean) => void;
   vibrationEnabled: boolean;
   setVibrationEnabled: (enabled: boolean) => void;
+  notes: Note[];
+  onImport: (notes: Note[]) => void;
+  onClearAll: () => void;
+  onExportSuccess: () => void;
 }
 
 export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
@@ -37,8 +41,72 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   soundEnabled,
   setSoundEnabled,
   vibrationEnabled,
-  setVibrationEnabled
+  setVibrationEnabled,
+  notes,
+  onImport,
+  onClearAll,
+  onExportSuccess
 }) => {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    if (notes.length === 0) {
+      alert('Eksport qilish uchun qaydlar mavjud emas.');
+      return;
+    }
+
+    const dataStr = JSON.stringify(notes, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `qaydlar_export_${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+
+    // Call success callback to show the custom confirmation modal
+    setTimeout(() => {
+      onExportSuccess();
+    }, 500);
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        if (Array.isArray(json)) {
+          // Basic validation of Note structure
+          const validNotes = json.filter(item => 
+            item && typeof item === 'object' && 'id' in item && 'title' in item
+          ) as Note[];
+          
+          if (validNotes.length > 0) {
+            onImport(validNotes);
+            setShowSettings(false);
+          } else {
+            alert('Faylda yaroqli qaydlar topilmadi.');
+          }
+        } else {
+          alert('Noto\'g\'ri format: JSON fayl massiv bo\'lishi kerak.');
+        }
+      } catch (error) {
+        console.error('Import hatosi:', error);
+        alert('Faylni o\'qishda xatolik yuz berdi.');
+      }
+    };
+    reader.readAsText(file);
+    
+    // Reset file input
+    if (e.target) {
+      e.target.value = '';
+    }
+  };
+
   return (
     <AnimatePresence>
       {showSettings && (
@@ -212,6 +280,44 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     </div>
                     {vibrationEnabled && <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentThemeStyles.text }} />}
                   </button>
+                </div>
+              </div>
+
+              {/* Data Export / Import */}
+              <div>
+                <div className="flex items-center gap-2 mb-4 opacity-40 text-[10px] font-bold uppercase tracking-widest">
+                  <Download size={14} />
+                  <span>Ma'lumotlar zaxirasi</span>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  <button
+                    onClick={handleExport}
+                    className="w-full py-3 px-4 text-left border-2 rounded-sm transition-all flex justify-between items-center hover:bg-black/5"
+                    style={{ borderColor: `${currentThemeStyles.border}20` }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Download size={18} />
+                      <span>Eksport (JSON)</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-3 px-4 text-left border-2 rounded-sm transition-all flex justify-between items-center hover:bg-black/5"
+                    style={{ borderColor: `${currentThemeStyles.border}20` }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Upload size={18} />
+                      <span>Import (JSON)</span>
+                    </div>
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json"
+                    onChange={handleImport}
+                    className="hidden"
+                  />
                 </div>
               </div>
 

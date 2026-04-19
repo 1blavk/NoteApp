@@ -10,7 +10,7 @@ interface NoteEditorProps {
   currentNote: Note;
   isLocked: boolean;
   setIsLocked: (locked: boolean) => void;
-  setIsEditing: (editing: boolean) => void;
+  onBack: () => void;
   handleUpdateNote: (id: string, updates: Partial<Note>) => void;
   handleDeleteNote: (id: string) => void;
   titleInputRef: React.RefObject<HTMLInputElement>;
@@ -23,7 +23,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   currentNote,
   isLocked,
   setIsLocked,
-  setIsEditing,
+  onBack,
   handleUpdateNote,
   handleDeleteNote,
   titleInputRef,
@@ -160,7 +160,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     >
       <div className="flex items-center gap-4 mb-6">
         <button 
-          onClick={() => setIsEditing(false)}
+          onClick={onBack}
           className="p-2 -ml-2 hover:opacity-70"
         >
           <ChevronLeft size={24} />
@@ -310,7 +310,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
               </div>
 
               <div className="h-48">
-                <Picker value={pickerValue} onChange={handlePickerChange} wheelMode="natural">
+                <Picker itemHeight={60} value={pickerValue}  onChange={handlePickerChange} wheelMode="natural">
                   {/* @ts-ignore */}
                   <Picker.Column name="day">
                     {days.map(day => (
